@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle } from 'lucide-react';
@@ -60,9 +60,6 @@ export const LoginPage: React.FC = () => {
           <div className="mx-auto flex justify-center">
             <img src="/tutti_logo.png" alt="Tutti Services" className="h-24 object-contain" />
           </div>
-          <CardDescription className="text-lg text-gray-600">
-            Distribuidora de Frutas y Verduras
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -86,7 +83,6 @@ export const LoginPage: React.FC = () => {
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="correo@ejemplo.com"
                     className="text-lg py-6"
                     required
                   />
@@ -97,7 +93,6 @@ export const LoginPage: React.FC = () => {
                     type="password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="********"
                     className="text-lg py-6"
                     required
                   />
