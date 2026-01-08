@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle } from 'lucide-react';
@@ -56,12 +56,11 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-32 h-32">
-            <img src="/tutti_logo.png" alt="Tutti Services" className="w-full h-full object-contain" />
+        <CardHeader className="text-center space-y-2">
+          <div className="mx-auto flex justify-center">
+            <img src="/tutti_logo.png" alt="Tutti Services" className="h-24 object-contain" />
           </div>
-          <CardTitle className="text-3xl font-bold text-green-800">Tutti Services</CardTitle>
-          <CardDescription className="text-lg">
+          <CardDescription className="text-lg text-gray-600">
             Distribuidora de Frutas y Verduras
           </CardDescription>
         </CardHeader>
@@ -74,9 +73,9 @@ export const LoginPage: React.FC = () => {
           )}
           
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login" className="text-lg py-3">Ingresar</TabsTrigger>
-              <TabsTrigger value="register" className="text-lg py-3">Registrarse</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-green-100 p-1 rounded-lg">
+              <TabsTrigger value="login" className="text-lg py-3 rounded-md data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">Ingresar</TabsTrigger>
+              <TabsTrigger value="register" className="text-lg py-3 rounded-md data-[state=active]:bg-green-600 data-[state=active]:text-white transition-all">Registrarse</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
