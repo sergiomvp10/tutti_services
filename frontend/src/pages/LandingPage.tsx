@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, LogIn, Users, Phone } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  
+  const [config, setConfig] = useState({
+    mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
+    subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
+    whatsappLink: 'https://wa.link/ykjebj'
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem('landingConfig');
+    if (saved) {
+      setConfig(JSON.parse(saved));
+    }
+  }, []);
 
   return (
     <div className="min-h-screen relative">
@@ -40,10 +53,10 @@ export const LandingPage: React.FC = () => {
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="text-center max-w-4xl">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Los productos más frescos y al mejor precio de Cartagena
+              {config.mainMessage}
             </h1>
             <p className="text-xl sm:text-2xl text-white/90 mb-12">
-              Distribuidora de Frutas y Verduras para mayoristas
+              {config.subtitle}
             </p>
             
             {/* Action Buttons */}
@@ -68,7 +81,7 @@ export const LandingPage: React.FC = () => {
               
               <button 
                 className="border-2 border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto rounded-md transition-colors font-medium"
-                onClick={() => window.open('https://wa.link/ykjebj', '_blank')}
+                onClick={() => window.open(config.whatsappLink, '_blank')}
               >
                 <Users className="w-8 h-8" />
                 <span>Trabaja con Nosotros</span>
@@ -76,7 +89,7 @@ export const LandingPage: React.FC = () => {
               
               <button 
                 className="border-2 border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto rounded-md transition-colors font-medium"
-                onClick={() => window.open('https://wa.link/ykjebj', '_blank')}
+                onClick={() => window.open(config.whatsappLink, '_blank')}
               >
                 <Phone className="w-8 h-8" />
                 <span>Contáctanos</span>
@@ -93,7 +106,7 @@ export const LandingPage: React.FC = () => {
 
       {/* WhatsApp Button */}
       <a
-        href="https://wa.link/ykjebj"
+        href={config.whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-xl transition-all hover:scale-110"

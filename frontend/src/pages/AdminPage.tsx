@@ -30,7 +30,8 @@ import {
   X,
   Settings,
   Key,
-  UserPlus
+  UserPlus,
+  Home
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -87,9 +88,27 @@ export const AdminPage: React.FC = () => {
     currentPassword: '', newPassword: '', confirmPassword: ''
   });
 
-  const [uploadingImage1, setUploadingImage1] = useState(false);
-  const [uploadingImage2, setUploadingImage2] = useState(false);
-  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+  const [landingConfig, setLandingConfig] = useState(() => {
+    const saved = localStorage.getItem('landingConfig');
+    return saved ? JSON.parse(saved) : {
+      mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
+      subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
+      whatsappLink: 'https://wa.link/ykjebj'
+    };
+  });
+
+    const [uploadingImage1, setUploadingImage1] = useState(false);
+    const [uploadingImage2, setUploadingImage2] = useState(false);
+    const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+
+    const [showCreateOrderDialog, setShowCreateOrderDialog] = useState(false);
+    const [newOrderForm, setNewOrderForm] = useState<{
+      user_id: string;
+      items: { product_id: number; product_name: string; quantity: number; price: number }[];
+      notes: string;
+    }>({ user_id: '', items: [], notes: '' });
+    const [selectedProductForOrder, setSelectedProductForOrder] = useState('');
+    const [quantityForOrder, setQuantityForOrder] = useState('1');
 
   const handleImageUpload = async (file: File, imageField: 'image_url' | 'image_url_2') => {
     const setUploading = imageField === 'image_url' ? setUploadingImage1 : setUploadingImage2;
@@ -337,7 +356,75 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const openEditProduct = (product: Product) => {
+    const handleSaveLandingConfig = () => {
+      localStorage.setItem('landingConfig', JSON.stringify(landingConfig));
+      alert('Configuración de landing page guardada exitosamente');
+    };
+
+    const resetNewOrderForm = () => {
+      setNewOrderForm({ user_id: '', items: [], notes: '' });
+      setSelectedProductForOrder('');
+      setQuantityForOrder('1');
+    };
+
+    const addProductToOrder = () => {
+      if (!selectedProductForOrder || !quantityForOrder) return;
+      const product = products.find(p => p.id.toString() === selectedProductForOrder);
+      if (!product) return;
+    
+      const existingIndex = newOrderForm.items.findIndex(i => i.product_id === product.id);
+      if (existingIndex >= 0) {
+        const updatedItems = [...newOrderForm.items];
+        updatedItems[existingIndex].quantity += parseFloat(quantityForOrder);
+        setNewOrderForm({ ...newOrderForm, items: updatedItems });
+      } else {
+        setNewOrderForm({
+          ...newOrderForm,
+          items: [...newOrderForm.items, {
+            product_id: product.id,
+            product_name: product.name,
+            quantity: parseFloat(quantityForOrder),
+            price: product.price
+          }]
+        });
+      }
+      setSelectedProductForOrder('');
+      setQuantityForOrder('1');
+    };
+
+    const removeProductFromOrder = (productId: number) => {
+      setNewOrderForm({
+        ...newOrderForm,
+        items: newOrderForm.items.filter(i => i.product_id !== productId)
+      });
+    };
+
+    const calculateOrderTotal = () => {
+      return newOrderForm.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    };
+
+    const handleCreateAdminOrder = async () => {
+      if (!newOrderForm.user_id || newOrderForm.items.length === 0) {
+        alert('Selecciona un cliente y agrega al menos un producto');
+        return;
+      }
+      try {
+        await api.adminCreateOrder({
+          user_id: parseInt(newOrderForm.user_id),
+          items: newOrderForm.items.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+          notes: newOrderForm.notes
+        });
+        setShowCreateOrderDialog(false);
+        resetNewOrderForm();
+        loadData();
+        alert('Pedido creado exitosamente');
+      } catch (error) {
+        console.error('Error creating order:', error);
+        alert('Error al crear el pedido');
+      }
+    };
+
+    const openEditProduct = (product: Product) => {
     setEditingProduct(product);
     setProductForm({
       name: product.name,
@@ -624,21 +711,26 @@ export const AdminPage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* Orders Tab */}
-          <TabsContent value="orders">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Pedidos ({orders.length})</CardTitle>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Buscar por # o cliente..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-              </CardHeader>
+                    {/* Orders Tab */}
+                    <TabsContent value="orders">
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
+                          <CardTitle>Pedidos ({orders.length})</CardTitle>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                              <Input
+                                placeholder="Buscar por # o cliente..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 w-64"
+                              />
+                            </div>
+                            <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetNewOrderForm(); setShowCreateOrderDialog(true); }}>
+                              <Plus className="w-4 h-4 mr-2" /> Nuevo Pedido
+                            </Button>
+                          </div>
+                        </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -809,6 +901,45 @@ export const AdminPage: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Landing Page Settings Card - Full Width */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Home className="w-5 h-5" /> Configuración de Landing Page
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Mensaje Principal</label>
+                  <Textarea 
+                    value={landingConfig.mainMessage} 
+                    onChange={(e) => setLandingConfig({...landingConfig, mainMessage: e.target.value})}
+                    placeholder="Los productos más frescos y al mejor precio de Cartagena"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Subtítulo</label>
+                  <Input 
+                    value={landingConfig.subtitle} 
+                    onChange={(e) => setLandingConfig({...landingConfig, subtitle: e.target.value})}
+                    placeholder="Distribuidora de Frutas y Verduras para mayoristas"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Link de WhatsApp</label>
+                  <Input 
+                    value={landingConfig.whatsappLink} 
+                    onChange={(e) => setLandingConfig({...landingConfig, whatsappLink: e.target.value})}
+                    placeholder="https://wa.link/ykjebj"
+                  />
+                </div>
+                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSaveLandingConfig}>
+                  Guardar Configuración
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
@@ -1154,6 +1285,97 @@ export const AdminPage: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowUserDialog(false)}>Cancelar</Button>
             <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveUser}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Order Dialog */}
+      <Dialog open={showCreateOrderDialog} onOpenChange={setShowCreateOrderDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Pedido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Cliente *</label>
+              <Select value={newOrderForm.user_id} onValueChange={(value) => setNewOrderForm({...newOrderForm, user_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.filter(u => u.role === 'buyer').map((u) => (
+                    <SelectItem key={u.id} value={u.id.toString()}>{u.name} - {u.phone || u.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="font-medium mb-3">Agregar Productos</h4>
+              <div className="flex gap-2 mb-4">
+                <Select value={selectedProductForOrder} onValueChange={setSelectedProductForOrder}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar producto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.filter(p => p.is_active).map((p) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name} - {formatPrice(p.price)}/{p.unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input 
+                  type="number" 
+                  value={quantityForOrder} 
+                  onChange={(e) => setQuantityForOrder(e.target.value)}
+                  placeholder="Cantidad"
+                  className="w-24"
+                  min="0.1"
+                  step="0.1"
+                />
+                <Button onClick={addProductToOrder} className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {newOrderForm.items.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-sm font-medium text-gray-600">Productos en el pedido:</h5>
+                  {newOrderForm.items.map((item) => (
+                    <div key={item.product_id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                      <div>
+                        <span className="font-medium">{item.product_name}</span>
+                        <span className="text-gray-500 ml-2">x {item.quantity}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-green-600">{formatPrice(item.quantity * item.price)}</span>
+                        <Button variant="ghost" size="sm" className="text-red-500" onClick={() => removeProductFromOrder(item.product_id)}>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Notas (opcional)</label>
+              <Textarea 
+                value={newOrderForm.notes} 
+                onChange={(e) => setNewOrderForm({...newOrderForm, notes: e.target.value})}
+                placeholder="Notas adicionales para el pedido"
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-between text-xl font-bold border-t pt-4">
+              <span>Total:</span>
+              <span className="text-green-600">{formatPrice(calculateOrderTotal())}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateOrderDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleCreateAdminOrder}>Crear Pedido</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -15,6 +15,11 @@ class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
     notes: str = ""
 
+class AdminOrderCreate(BaseModel):
+    user_id: int
+    items: List[OrderItemCreate]
+    notes: str = ""
+
 class OrderItemResponse(BaseModel):
     id: int
     product_id: int
@@ -262,9 +267,52 @@ async def update_order_status(
             detail=f"Estado invalido. Estados validos: {', '.join(valid_statuses)}"
         )
     
-    cursor = await db.execute("SELECT id FROM orders WHERE id = ?", (order_id,))
-    if not await cursor.fetchone():
+    cursor = await db.execute("SELECT id, status FROM orders WHERE id = ?", (order_id,))
+    order_check = await cursor.fetchone()
+    if not order_check:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    
+    previous_status = order_check['status']
+    
+    # Subtract stock when order is confirmed (only if it wasn't already confirmed)
+    if status_update.status == 'confirmed' and previous_status != 'confirmed':
+        cursor = await db.execute("""
+            SELECT oi.product_id, oi.quantity, p.stock, p.name
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        """, (order_id,))
+        items = await cursor.fetchall()
+        
+        for item in items:
+            new_stock = item['stock'] - item['quantity']
+            if new_stock < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Stock insuficiente para {item['name']}. Disponible: {item['stock']}, Solicitado: {item['quantity']}"
+                )
+        
+        # Update stock for all items
+        for item in items:
+            await db.execute(
+                "UPDATE products SET stock = stock - ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (item['quantity'], item['product_id'])
+            )
+    
+    # Restore stock if order is cancelled (only if it was previously confirmed)
+    if status_update.status == 'cancelled' and previous_status == 'confirmed':
+        cursor = await db.execute("""
+            SELECT oi.product_id, oi.quantity
+            FROM order_items oi
+            WHERE oi.order_id = ?
+        """, (order_id,))
+        items = await cursor.fetchall()
+        
+        for item in items:
+            await db.execute(
+                "UPDATE products SET stock = stock + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (item['quantity'], item['product_id'])
+            )
     
     await db.execute(
         "UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -308,6 +356,100 @@ async def update_order_status(
             discount=item['discount'],
             subtotal=round(item['quantity'] * item['price'] * (1 - item['discount'] / 100), 2)
         ) for item in items]
+    )
+
+@router.post("/admin", response_model=OrderResponse)
+async def admin_create_order(
+    order: AdminOrderCreate,
+    admin: dict = Depends(get_admin_user),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Admin creates an order on behalf of a client"""
+    if not order.items:
+        raise HTTPException(status_code=400, detail="El pedido debe tener al menos un producto")
+    
+    # Verify user exists
+    cursor = await db.execute("SELECT id, name, phone FROM users WHERE id = ?", (order.user_id,))
+    user = await cursor.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    total = 0
+    items_data = []
+    
+    for item in order.items:
+        cursor = await db.execute("""
+            SELECT p.id, p.name, p.price, p.stock, p.is_active,
+                   (SELECT MAX(pr.discount_percent) FROM promotions pr 
+                    WHERE (pr.product_id = p.id OR pr.category_id = p.category_id)
+                    AND pr.is_active = 1 
+                    AND datetime('now') BETWEEN pr.start_date AND pr.end_date) as discount_percent
+            FROM products p
+            WHERE p.id = ?
+        """, (item.product_id,))
+        product = await cursor.fetchone()
+        
+        if not product:
+            raise HTTPException(status_code=400, detail=f"Producto {item.product_id} no encontrado")
+        
+        if not product['is_active']:
+            raise HTTPException(status_code=400, detail=f"Producto {product['name']} no esta disponible")
+        
+        discount = product['discount_percent'] or 0
+        price = product['price']
+        subtotal = item.quantity * price * (1 - discount / 100)
+        total += subtotal
+        
+        items_data.append({
+            'product_id': item.product_id,
+            'product_name': product['name'],
+            'quantity': item.quantity,
+            'price': price,
+            'discount': discount
+        })
+    
+    cursor = await db.execute(
+        "INSERT INTO orders (user_id, total, notes) VALUES (?, ?, ?)",
+        (order.user_id, round(total, 2), order.notes)
+    )
+    await db.commit()
+    order_id = cursor.lastrowid
+    
+    order_items_response = []
+    for item_data in items_data:
+        cursor = await db.execute(
+            "INSERT INTO order_items (order_id, product_id, quantity, price, discount) VALUES (?, ?, ?, ?, ?)",
+            (order_id, item_data['product_id'], item_data['quantity'], item_data['price'], item_data['discount'])
+        )
+        await db.commit()
+        item_id = cursor.lastrowid
+        
+        order_items_response.append(OrderItemResponse(
+            id=item_id,
+            product_id=item_data['product_id'],
+            product_name=item_data['product_name'],
+            quantity=item_data['quantity'],
+            price=item_data['price'],
+            discount=item_data['discount'],
+            subtotal=round(item_data['quantity'] * item_data['price'] * (1 - item_data['discount'] / 100), 2)
+        ))
+    
+    cursor = await db.execute(
+        "SELECT created_at FROM orders WHERE id = ?",
+        (order_id,)
+    )
+    order_row = await cursor.fetchone()
+    
+    return OrderResponse(
+        id=order_id,
+        user_id=order.user_id,
+        user_name=user['name'],
+        user_phone=user['phone'],
+        status='pending',
+        total=round(total, 2),
+        notes=order.notes,
+        created_at=order_row['created_at'],
+        items=order_items_response
     )
 
 @router.delete("/{order_id}")
