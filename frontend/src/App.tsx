@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-import { LoginPage, CatalogPage, CheckoutPage, OrdersPage, AdminPage } from './pages';
+import { LandingPage, LoginPage, CatalogPage, CheckoutPage, OrdersPage, AdminPage } from './pages';
 
 function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, isLoading } = useAuth();
@@ -46,6 +46,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={
         <PublicRoute>
           <LoginPage />
@@ -71,7 +72,7 @@ function AppRoutes() {
           <AdminPage />
         </PrivateRoute>
       } />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingBasket, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login, register } = useAuth();
@@ -57,8 +57,8 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto bg-green-600 text-white p-4 rounded-full w-20 h-20 flex items-center justify-center">
-            <ShoppingBasket size={40} />
+          <div className="mx-auto w-32 h-32">
+            <img src="/tutti_logo.png" alt="Tutti Services" className="w-full h-full object-contain" />
           </div>
           <CardTitle className="text-3xl font-bold text-green-800">Tutti Services</CardTitle>
           <CardDescription className="text-lg">

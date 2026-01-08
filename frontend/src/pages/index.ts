@@ -1,3 +1,4 @@
+export { LandingPage } from './LandingPage';
 export { LoginPage } from './LoginPage';
 export { CatalogPage } from './CatalogPage';
 export { CheckoutPage } from './CheckoutPage';

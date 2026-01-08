@@ -25,7 +25,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Truck
+  Truck,
+  Upload,
+  X
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -72,6 +74,39 @@ export const AdminPage: React.FC = () => {
     name: '', description: '', discount_percent: '', product_id: '', category_id: '',
     start_date: '', end_date: '', is_active: true
   });
+
+  const [uploadingImage1, setUploadingImage1] = useState(false);
+  const [uploadingImage2, setUploadingImage2] = useState(false);
+  const [uploadingCategoryImage, setUploadingCategoryImage] = useState(false);
+
+  const handleImageUpload = async (file: File, imageField: 'image_url' | 'image_url_2') => {
+    const setUploading = imageField === 'image_url' ? setUploadingImage1 : setUploadingImage2;
+    setUploading(true);
+    try {
+      const result = await api.uploadFile(file);
+      const fullUrl = api.getUploadUrl(result.filename);
+      setProductForm(prev => ({ ...prev, [imageField]: fullUrl }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCategoryImageUpload = async (file: File) => {
+    setUploadingCategoryImage(true);
+    try {
+      const result = await api.uploadFile(file);
+      const fullUrl = api.getUploadUrl(result.filename);
+      setCategoryForm(prev => ({ ...prev, image_url: fullUrl }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error al subir la imagen');
+    } finally {
+      setUploadingCategoryImage(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.role !== 'admin') {
@@ -307,18 +342,18 @@ export const AdminPage: React.FC = () => {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-green-700 text-white shadow-lg">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Package className="w-10 h-10" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <img src="/tutti_logo.png" alt="Tutti Services" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
               <div>
-                <h1 className="text-2xl font-bold">Panel de Administracion</h1>
-                <p className="text-green-200 text-sm">Tutti Services</p>
+                <h1 className="text-lg sm:text-2xl font-bold">Panel de Administracion</h1>
+                <p className="text-green-200 text-xs sm:text-sm">Tutti Services</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-green-200">{user?.name}</span>
-              <Button variant="ghost" className="text-white hover:bg-green-800" onClick={logout}>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-green-200 text-sm hidden sm:inline">{user?.name}</span>
+              <Button variant="ghost" className="text-white hover:bg-green-800 p-2" onClick={logout}>
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -329,41 +364,41 @@ export const AdminPage: React.FC = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-5 mb-6">
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <Package className="w-4 h-4" /> Productos
+          <TabsList className="w-full flex overflow-x-auto mb-6 h-auto p-1 gap-1">
+            <TabsTrigger value="products" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <Package className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Productos</span>
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <FolderOpen className="w-4 h-4" /> Categorias
+            <TabsTrigger value="categories" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <FolderOpen className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Categorias</span>
             </TabsTrigger>
-            <TabsTrigger value="promotions" className="flex items-center gap-2">
-              <Tag className="w-4 h-4" /> Promociones
+            <TabsTrigger value="promotions" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <Tag className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Promos</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4" /> Pedidos
+            <TabsTrigger value="orders" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <ShoppingBag className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Pedidos</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="w-4 h-4" /> Clientes
+            <TabsTrigger value="users" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <Users className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Clientes</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Products Tab */}
           <TabsContent value="products">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Productos ({products.length})</CardTitle>
-                <div className="flex gap-2">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <CardTitle className="text-lg sm:text-xl">Productos ({products.length})</CardTitle>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       placeholder="Buscar..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-64"
+                      className="pl-10 w-full sm:w-48"
                     />
                   </div>
-                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetProductForm(); setShowProductDialog(true); }}>
-                    <Plus className="w-4 h-4 mr-2" /> Nuevo Producto
+                  <Button className="bg-green-600 hover:bg-green-700 text-sm" onClick={() => { resetProductForm(); setShowProductDialog(true); }}>
+                    <Plus className="w-4 h-4 mr-1" /> Nuevo
                   </Button>
                 </div>
               </CardHeader>
@@ -677,12 +712,66 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">URL Imagen 1</label>
-              <Input value={productForm.image_url} onChange={(e) => setProductForm({...productForm, image_url: e.target.value})} placeholder="https://..." />
+              <label className="block text-sm font-medium mb-1">Imagen 1</label>
+              <div className="space-y-2">
+                {productForm.image_url && (
+                  <div className="relative w-32 h-32">
+                    <img src={productForm.image_url} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({...productForm, image_url: ''})}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer w-fit">
+                  <Upload className="w-5 h-5" />
+                  <span>{uploadingImage1 ? 'Subiendo...' : 'Subir imagen'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage1}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, 'image_url');
+                    }}
+                  />
+                </label>
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">URL Imagen 2 (opcional)</label>
-              <Input value={productForm.image_url_2} onChange={(e) => setProductForm({...productForm, image_url_2: e.target.value})} placeholder="https://..." />
+              <label className="block text-sm font-medium mb-1">Imagen 2 (opcional)</label>
+              <div className="space-y-2">
+                {productForm.image_url_2 && (
+                  <div className="relative w-32 h-32">
+                    <img src={productForm.image_url_2} alt="Preview 2" className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({...productForm, image_url_2: ''})}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer w-fit">
+                  <Upload className="w-5 h-5" />
+                  <span>{uploadingImage2 ? 'Subiendo...' : 'Subir imagen'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage2}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, 'image_url_2');
+                    }}
+                  />
+                </label>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -708,8 +797,35 @@ export const AdminPage: React.FC = () => {
               <Textarea value={categoryForm.description} onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">URL Imagen</label>
-              <Input value={categoryForm.image_url} onChange={(e) => setCategoryForm({...categoryForm, image_url: e.target.value})} placeholder="https://..." />
+              <label className="block text-sm font-medium mb-1">Imagen</label>
+              <div className="space-y-2">
+                {categoryForm.image_url && (
+                  <div className="relative w-32 h-32">
+                    <img src={categoryForm.image_url} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => setCategoryForm({...categoryForm, image_url: ''})}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer w-fit">
+                  <Upload className="w-5 h-5" />
+                  <span>{uploadingCategoryImage ? 'Subiendo...' : 'Subir imagen'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingCategoryImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleCategoryImageUpload(file);
+                    }}
+                  />
+                </label>
+              </div>
             </div>
           </div>
           <DialogFooter>

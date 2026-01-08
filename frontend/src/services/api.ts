@@ -217,4 +217,26 @@ export const api = {
     if (!response.ok) throw new Error('Error al obtener usuarios');
     return response.json();
   },
+
+  async uploadFile(file: File): Promise<{ filename: string; url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_URL}/uploads`, {
+      method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al subir archivo');
+    }
+    return response.json();
+  },
+
+  getUploadUrl(filename: string): string {
+    return `${API_URL}/uploads/${filename}`;
+  },
 };

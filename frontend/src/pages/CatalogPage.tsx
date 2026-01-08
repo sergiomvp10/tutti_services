@@ -86,7 +86,7 @@ export const CatalogPage: React.FC = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Package className="w-10 h-10" />
+              <img src="/tutti_logo.png" alt="Tutti Services" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-2xl font-bold">Tutti Services</h1>
                 <p className="text-green-100 text-sm">Catalogo de Productos</p>
