@@ -4,6 +4,8 @@ export interface User {
   name: string;
   phone: string | null;
   address: string | null;
+  city: string | null;
+  purchase_volume: string | null;
   role: 'admin' | 'buyer';
 }
 

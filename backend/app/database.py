@@ -27,11 +27,23 @@ async def init_db():
                 name TEXT NOT NULL,
                 phone TEXT,
                 address TEXT,
+                city TEXT,
+                purchase_volume TEXT,
                 role TEXT NOT NULL DEFAULT 'buyer',
                 is_active INTEGER DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Add new columns if they don't exist (for existing databases)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN city TEXT")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN purchase_volume TEXT")
+        except:
+            pass
         
         await db.execute("""
             CREATE TABLE IF NOT EXISTS categories (

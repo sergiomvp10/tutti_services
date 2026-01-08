@@ -13,6 +13,8 @@ class UserResponse(BaseModel):
     name: str
     phone: str | None
     address: str | None
+    city: str | None
+    purchase_volume: str | None
     role: str
     is_active: bool
 
@@ -22,12 +24,16 @@ class UserCreate(BaseModel):
     name: str
     phone: str = ""
     address: str = ""
+    city: str = ""
+    purchase_volume: str = ""
     role: str = "buyer"
 
 class UserUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
     address: str | None = None
+    city: str | None = None
+    purchase_volume: str | None = None
     is_active: bool | None = None
     role: str | None = None
 
@@ -38,7 +44,7 @@ async def get_users(
     admin: dict = Depends(get_admin_user),
     db: aiosqlite.Connection = Depends(get_db)
 ):
-    query = "SELECT id, email, name, phone, address, role, is_active FROM users WHERE 1=1"
+    query = "SELECT id, email, name, phone, address, city, purchase_volume, role, is_active FROM users WHERE 1=1"
     params = []
     
     if role:
@@ -60,6 +66,8 @@ async def get_users(
         name=row['name'],
         phone=row['phone'],
         address=row['address'],
+        city=row['city'],
+        purchase_volume=row['purchase_volume'],
         role=row['role'],
         is_active=bool(row['is_active'])
     ) for row in rows]
@@ -71,7 +79,7 @@ async def get_user(
     db: aiosqlite.Connection = Depends(get_db)
 ):
     cursor = await db.execute(
-        "SELECT id, email, name, phone, address, role, is_active FROM users WHERE id = ?",
+        "SELECT id, email, name, phone, address, city, purchase_volume, role, is_active FROM users WHERE id = ?",
         (user_id,)
     )
     row = await cursor.fetchone()
@@ -85,6 +93,8 @@ async def get_user(
         name=row['name'],
         phone=row['phone'],
         address=row['address'],
+        city=row['city'],
+        purchase_volume=row['purchase_volume'],
         role=row['role'],
         is_active=bool(row['is_active'])
     )
@@ -105,9 +115,9 @@ async def create_user(
     password_hash = get_password_hash(user.password)
     
     cursor = await db.execute(
-        """INSERT INTO users (email, password_hash, name, phone, address, role) 
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (user.email, password_hash, user.name, user.phone, user.address, user.role)
+        """INSERT INTO users (email, password_hash, name, phone, address, city, purchase_volume, role) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (user.email, password_hash, user.name, user.phone, user.address, user.city, user.purchase_volume, user.role)
     )
     await db.commit()
     user_id = cursor.lastrowid
@@ -118,6 +128,8 @@ async def create_user(
         name=user.name,
         phone=user.phone,
         address=user.address,
+        city=user.city,
+        purchase_volume=user.purchase_volume,
         role=user.role,
         is_active=True
     )
@@ -145,6 +157,12 @@ async def update_user(
     if user.address is not None:
         updates.append("address = ?")
         values.append(user.address)
+    if user.city is not None:
+        updates.append("city = ?")
+        values.append(user.city)
+    if user.purchase_volume is not None:
+        updates.append("purchase_volume = ?")
+        values.append(user.purchase_volume)
     if user.is_active is not None:
         updates.append("is_active = ?")
         values.append(1 if user.is_active else 0)
@@ -163,7 +181,7 @@ async def update_user(
         await db.commit()
     
     cursor = await db.execute(
-        "SELECT id, email, name, phone, address, role, is_active FROM users WHERE id = ?",
+        "SELECT id, email, name, phone, address, city, purchase_volume, role, is_active FROM users WHERE id = ?",
         (user_id,)
     )
     row = await cursor.fetchone()
@@ -174,6 +192,8 @@ async def update_user(
         name=row['name'],
         phone=row['phone'],
         address=row['address'],
+        city=row['city'],
+        purchase_volume=row['purchase_volume'],
         role=row['role'],
         is_active=bool(row['is_active'])
     )

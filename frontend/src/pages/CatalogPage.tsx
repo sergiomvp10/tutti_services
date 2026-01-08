@@ -36,21 +36,29 @@ export const CatalogPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [showCart, setShowCart] = useState(false);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     loadData();
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, debouncedSearch]);
 
   const loadData = async () => {
     try {
       const [productsData, categoriesData] = await Promise.all([
         api.getProducts({ 
           category_id: selectedCategory || undefined, 
-          search: searchQuery || undefined 
+          search: debouncedSearch || undefined 
         }),
         api.getCategories(),
       ]);
@@ -64,6 +72,10 @@ export const CatalogPage: React.FC = () => {
   };
 
   const handleAddToCart = () => {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
     if (selectedProduct) {
       addToCart(selectedProduct, quantity);
       setSelectedProduct(null);
@@ -93,29 +105,41 @@ export const CatalogPage: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-green-700 relative"
-                onClick={() => setShowCart(true)}
-              >
-                <ShoppingCart className="w-8 h-8" />
-                {itemCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-lg px-2">
-                    {itemCount}
-                  </Badge>
-                )}
-              </Button>
-              <div className="hidden md:flex items-center gap-2 text-green-100">
-                <User className="w-5 h-5" />
-                <span>{user?.name}</span>
-              </div>
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-green-700"
-                onClick={logout}
-              >
-                <LogOut className="w-6 h-6" />
-              </Button>
+              {user ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-green-700 relative"
+                    onClick={() => setShowCart(true)}
+                  >
+                    <ShoppingCart className="w-8 h-8" />
+                    {itemCount > 0 && (
+                      <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-lg px-2">
+                        {itemCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  <div className="hidden md:flex items-center gap-2 text-green-100">
+                    <User className="w-5 h-5" />
+                    <span>{user?.name}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-green-700"
+                    onClick={logout}
+                  >
+                    <LogOut className="w-6 h-6" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-green-700 bg-green-700"
+                  onClick={() => window.location.href = '/login'}
+                >
+                  Iniciar Sesión
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -210,6 +234,10 @@ export const CatalogPage: React.FC = () => {
                   className="absolute top-2 right-2 w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!user) {
+                      window.location.href = '/login';
+                      return;
+                    }
                     addToCart(product, product.min_order);
                   }}
                 >

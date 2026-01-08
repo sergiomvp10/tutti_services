@@ -27,7 +27,10 @@ import {
   XCircle,
   Truck,
   Upload,
-  X
+  X,
+  Settings,
+  Key,
+  UserPlus
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -57,6 +60,7 @@ export const AdminPage: React.FC = () => {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showPromotionDialog, setShowPromotionDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [showUserDialog, setShowUserDialog] = useState(false);
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -73,6 +77,14 @@ export const AdminPage: React.FC = () => {
   const [promotionForm, setPromotionForm] = useState({
     name: '', description: '', discount_percent: '', product_id: '', category_id: '',
     start_date: '', end_date: '', is_active: true
+  });
+
+  const [userForm, setUserForm] = useState({
+    name: '', email: '', password: '', phone: '', address: '', city: '', purchase_volume: ''
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '', newPassword: '', confirmPassword: ''
   });
 
   const [uploadingImage1, setUploadingImage1] = useState(false);
@@ -277,6 +289,54 @@ export const AdminPage: React.FC = () => {
     setEditingPromotion(null);
   };
 
+  const resetUserForm = () => {
+    setUserForm({ name: '', email: '', password: '', phone: '', address: '', city: '', purchase_volume: '' });
+  };
+
+  const resetPasswordForm = () => {
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+    try {
+      await api.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      alert('Contraseña actualizada exitosamente');
+      resetPasswordForm();
+    } catch (error) {
+      console.error('Error changing password:', error);
+      alert('Error al cambiar la contraseña. Verifica que la contraseña actual sea correcta.');
+    }
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      await api.createUser({
+        email: userForm.email,
+        password: userForm.password,
+        name: userForm.name,
+        phone: userForm.phone,
+        address: userForm.address,
+        city: userForm.city,
+        purchase_volume: userForm.purchase_volume,
+        role: 'buyer'
+      });
+      setShowUserDialog(false);
+      resetUserForm();
+      loadData();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert('Error al crear el cliente');
+    }
+  };
+
   const openEditProduct = (product: Product) => {
     setEditingProduct(product);
     setProductForm({
@@ -379,6 +439,9 @@ export const AdminPage: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="users" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
               <Users className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Clientes</span>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
+              <Settings className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Config</span>
             </TabsTrigger>
           </TabsList>
 
@@ -624,8 +687,11 @@ export const AdminPage: React.FC = () => {
           {/* Users Tab */}
           <TabsContent value="users">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Clientes ({users.filter(u => u.role === 'buyer').length})</CardTitle>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetUserForm(); setShowUserDialog(true); }}>
+                  <UserPlus className="w-4 h-4 mr-2" /> Nuevo Cliente
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -635,7 +701,9 @@ export const AdminPage: React.FC = () => {
                         <th className="text-left p-3">Nombre</th>
                         <th className="text-left p-3">Email</th>
                         <th className="text-left p-3">Telefono</th>
+                        <th className="text-left p-3">Ciudad</th>
                         <th className="text-left p-3">Direccion</th>
+                        <th className="text-left p-3">Vol. Compra</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -644,7 +712,9 @@ export const AdminPage: React.FC = () => {
                           <td className="p-3 font-medium">{u.name}</td>
                           <td className="p-3">{u.email}</td>
                           <td className="p-3">{u.phone || '-'}</td>
+                          <td className="p-3">{u.city || '-'}</td>
                           <td className="p-3">{u.address || '-'}</td>
+                          <td className="p-3">{u.purchase_volume || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -652,6 +722,93 @@ export const AdminPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Change Password Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="w-5 h-5" /> Cambiar Contraseña
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Contraseña Actual</label>
+                    <Input 
+                      type="password" 
+                      value={passwordForm.currentPassword} 
+                      onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nueva Contraseña</label>
+                    <Input 
+                      type="password" 
+                      value={passwordForm.newPassword} 
+                      onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Confirmar Nueva Contraseña</label>
+                    <Input 
+                      type="password" 
+                      value={passwordForm.confirmPassword} 
+                      onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})} 
+                    />
+                  </div>
+                  <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleChangePassword}>
+                    Actualizar Contraseña
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Create User Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserPlus className="w-5 h-5" /> Crear Nuevo Cliente
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nombre *</label>
+                    <Input value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email *</label>
+                    <Input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Contraseña *</label>
+                    <Input type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Teléfono</label>
+                      <Input value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Ciudad</label>
+                      <Input value={userForm.city} onChange={(e) => setUserForm({...userForm, city: e.target.value})} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Dirección</label>
+                    <Input value={userForm.address} onChange={(e) => setUserForm({...userForm, address: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Volumen de Compra</label>
+                    <Input value={userForm.purchase_volume} onChange={(e) => setUserForm({...userForm, purchase_volume: e.target.value})} placeholder="Ej: Alto, Medio, Bajo" />
+                  </div>
+                  <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSaveUser}>
+                    Crear Cliente
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
@@ -953,6 +1110,51 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* User Dialog */}
+      <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nuevo Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <Input value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email *</label>
+              <Input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Contraseña *</label>
+              <Input type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Teléfono</label>
+                <Input value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Ciudad</label>
+                <Input value={userForm.city} onChange={(e) => setUserForm({...userForm, city: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Dirección</label>
+              <Input value={userForm.address} onChange={(e) => setUserForm({...userForm, address: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Volumen de Compra</label>
+              <Input value={userForm.purchase_volume} onChange={(e) => setUserForm({...userForm, purchase_volume: e.target.value})} placeholder="Ej: Alto, Medio, Bajo" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUserDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveUser}>Guardar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

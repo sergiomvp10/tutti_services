@@ -52,11 +52,7 @@ function AppRoutes() {
           <LoginPage />
         </PublicRoute>
       } />
-      <Route path="/catalog" element={
-        <PrivateRoute>
-          <CatalogPage />
-        </PrivateRoute>
-      } />
+      <Route path="/catalog" element={<CatalogPage />} />
       <Route path="/checkout" element={
         <PrivateRoute>
           <CheckoutPage />

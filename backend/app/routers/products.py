@@ -74,7 +74,7 @@ async def get_products(
         params.append(category_id)
     
     if search:
-        query += " AND (p.name LIKE ? OR p.description LIKE ?)"
+        query += " AND (LOWER(p.name) LIKE LOWER(?) OR LOWER(p.description) LIKE LOWER(?))"
         params.extend([f"%{search}%", f"%{search}%"])
     
     query += " ORDER BY p.name"

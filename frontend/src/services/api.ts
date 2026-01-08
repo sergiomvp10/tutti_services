@@ -218,6 +218,41 @@ export const api = {
     return response.json();
   },
 
+  async createUser(data: { email: string; password: string; name: string; phone?: string; address?: string; city?: string; purchase_volume?: string; role?: string }): Promise<User> {
+    const response = await fetch(`${API_URL}/users`, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al crear usuario');
+    }
+    return response.json();
+  },
+
+  async updateUser(id: number, data: { name?: string; phone?: string; address?: string; city?: string; purchase_volume?: string; is_active?: boolean }): Promise<User> {
+    const response = await fetch(`${API_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al actualizar usuario');
+    return response.json();
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(`${API_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Error al cambiar contraseña');
+    }
+  },
+
   async uploadFile(file: File): Promise<{ filename: string; url: string }> {
     const formData = new FormData();
     formData.append('file', file);
