@@ -70,7 +70,7 @@ export const LoginPage: React.FC = () => {
           )}
           
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 bg-transparent border-b-2 border-gray-200 rounded-none p-0">
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-transparent border-none rounded-none p-0 h-auto">
               <TabsTrigger value="login" className="text-lg py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-600 data-[state=active]:font-semibold transition-all bg-transparent text-gray-500 hover:text-green-600">Ingresar</TabsTrigger>
               <TabsTrigger value="register" className="text-lg py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-green-600 data-[state=active]:bg-transparent data-[state=active]:text-green-600 data-[state=active]:font-semibold transition-all bg-transparent text-gray-500 hover:text-green-600">Registrarse</TabsTrigger>
             </TabsList>
