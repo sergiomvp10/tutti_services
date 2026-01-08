@@ -23,9 +23,8 @@ export const LandingPage: React.FC = () => {
         {/* Header */}
         <header className="p-4 sm:p-6">
           <div className="container mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src="/tutti_logo.png" alt="Tutti Services" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
-              <span className="text-white text-xl sm:text-2xl font-bold">Tutti Services</span>
+            <div className="flex items-center">
+              <img src="/tutti_logo.png" alt="Tutti Services" className="h-16 sm:h-20 md:h-24 object-contain" />
             </div>
             <button 
               className="inline-flex items-center px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-green-700 transition-colors font-medium"
