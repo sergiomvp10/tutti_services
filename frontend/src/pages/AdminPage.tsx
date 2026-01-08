@@ -88,14 +88,16 @@ export const AdminPage: React.FC = () => {
     currentPassword: '', newPassword: '', confirmPassword: ''
   });
 
-  const [landingConfig, setLandingConfig] = useState(() => {
-    const saved = localStorage.getItem('landingConfig');
-    return saved ? JSON.parse(saved) : {
-      mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
-      subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
-      whatsappLink: 'https://wa.link/ykjebj'
-    };
-  });
+    const [landingConfig, setLandingConfig] = useState(() => {
+      const saved = localStorage.getItem('landingConfig');
+      return saved ? JSON.parse(saved) : {
+        mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
+        subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
+        whatsappLink: 'https://wa.link/ykjebj',
+        backgroundImage: ''
+      };
+    });
+    const [uploadingLandingImage, setUploadingLandingImage] = useState(false);
 
     const [uploadingImage1, setUploadingImage1] = useState(false);
     const [uploadingImage2, setUploadingImage2] = useState(false);
@@ -125,21 +127,35 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleCategoryImageUpload = async (file: File) => {
-    setUploadingCategoryImage(true);
-    try {
-      const result = await api.uploadFile(file);
-      const fullUrl = api.getUploadUrl(result.filename);
-      setCategoryForm(prev => ({ ...prev, image_url: fullUrl }));
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Error al subir la imagen');
-    } finally {
-      setUploadingCategoryImage(false);
-    }
-  };
+    const handleCategoryImageUpload = async (file: File) => {
+      setUploadingCategoryImage(true);
+      try {
+        const result = await api.uploadFile(file);
+        const fullUrl = api.getUploadUrl(result.filename);
+        setCategoryForm(prev => ({ ...prev, image_url: fullUrl }));
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Error al subir la imagen');
+      } finally {
+        setUploadingCategoryImage(false);
+      }
+    };
 
-  useEffect(() => {
+    const handleLandingImageUpload = async (file: File) => {
+      setUploadingLandingImage(true);
+      try {
+        const result = await api.uploadFile(file);
+        const fullUrl = api.getUploadUrl(result.filename);
+        setLandingConfig((prev: typeof landingConfig) => ({ ...prev, backgroundImage: fullUrl }));
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        alert('Error al subir la imagen');
+      } finally {
+        setUploadingLandingImage(false);
+      }
+    };
+
+    useEffect(() => {
     if (user?.role !== 'admin') {
       navigate('/catalog');
       return;
@@ -927,17 +943,50 @@ export const AdminPage: React.FC = () => {
                     placeholder="Distribuidora de Frutas y Verduras para mayoristas"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Link de WhatsApp</label>
-                  <Input 
-                    value={landingConfig.whatsappLink} 
-                    onChange={(e) => setLandingConfig({...landingConfig, whatsappLink: e.target.value})}
-                    placeholder="https://wa.link/ykjebj"
-                  />
-                </div>
-                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSaveLandingConfig}>
-                  Guardar Configuración
-                </Button>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Link de WhatsApp</label>
+                                  <Input 
+                                    value={landingConfig.whatsappLink} 
+                                    onChange={(e) => setLandingConfig({...landingConfig, whatsappLink: e.target.value})}
+                                    placeholder="https://wa.link/ykjebj"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium mb-1">Imagen de Fondo</label>
+                                  <div className="flex gap-2 items-center">
+                                    <Input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleLandingImageUpload(file);
+                                      }}
+                                      className="flex-1"
+                                      disabled={uploadingLandingImage}
+                                    />
+                                    {uploadingLandingImage && <span className="text-sm text-gray-500">Subiendo...</span>}
+                                  </div>
+                                  {landingConfig.backgroundImage && (
+                                    <div className="mt-2">
+                                      <img 
+                                        src={landingConfig.backgroundImage} 
+                                        alt="Preview" 
+                                        className="w-full h-32 object-cover rounded-lg"
+                                      />
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-red-500 mt-1"
+                                        onClick={() => setLandingConfig({...landingConfig, backgroundImage: ''})}
+                                      >
+                                        <X className="w-4 h-4 mr-1" /> Eliminar imagen
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleSaveLandingConfig}>
+                                  Guardar Configuración
+                                </Button>
               </CardContent>
             </Card>
           </TabsContent>

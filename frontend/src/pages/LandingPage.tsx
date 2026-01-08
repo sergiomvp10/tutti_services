@@ -6,11 +6,12 @@ import { ShoppingBag, LogIn, Users, Phone } from 'lucide-react';
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   
-  const [config, setConfig] = useState({
-    mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
-    subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
-    whatsappLink: 'https://wa.link/ykjebj'
-  });
+    const [config, setConfig] = useState({
+      mainMessage: 'Los productos más frescos y al mejor precio de Cartagena',
+      subtitle: 'Distribuidora de Frutas y Verduras para mayoristas',
+      whatsappLink: 'https://wa.link/ykjebj',
+      backgroundImage: ''
+    });
 
   useEffect(() => {
     const saved = localStorage.getItem('landingConfig');
@@ -21,15 +22,15 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen relative">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&q=80')`,
-        }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
-      </div>
+            {/* Background Image */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url('${config.backgroundImage || 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=1920&q=80'}')`,
+              }}
+            >
+              <div className="absolute inset-0 bg-black/50"></div>
+            </div>
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
