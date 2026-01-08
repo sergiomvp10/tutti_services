@@ -51,7 +51,7 @@ export const LandingPage: React.FC = () => {
               <Button 
                 size="lg"
                 className="bg-green-600 hover:bg-green-700 text-white py-6 text-lg flex flex-col items-center gap-2 h-auto"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/catalog')}
               >
                 <ShoppingBag className="w-8 h-8" />
                 <span>Catálogo</span>
