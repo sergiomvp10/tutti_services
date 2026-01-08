@@ -27,14 +27,13 @@ export const LandingPage: React.FC = () => {
               <img src="/tutti_logo.png" alt="Tutti Services" className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
               <span className="text-white text-xl sm:text-2xl font-bold">Tutti Services</span>
             </div>
-            <Button 
-              variant="outline" 
-              className="text-white border-white hover:bg-white hover:text-green-700"
+            <button 
+              className="inline-flex items-center px-4 py-2 border-2 border-white text-white rounded-md hover:bg-white hover:text-green-700 transition-colors font-medium"
               onClick={() => navigate('/login')}
             >
               <LogIn className="w-5 h-5 mr-2" />
               Ingresar
-            </Button>
+            </button>
           </div>
         </header>
 
@@ -68,25 +67,21 @@ export const LandingPage: React.FC = () => {
                 <span>Iniciar Sesión</span>
               </Button>
               
-              <Button 
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto"
+              <button 
+                className="border-2 border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto rounded-md transition-colors font-medium"
                 onClick={() => window.open('https://wa.link/ykjebj', '_blank')}
               >
                 <Users className="w-8 h-8" />
                 <span>Trabaja con Nosotros</span>
-              </Button>
+              </button>
               
-              <Button 
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto"
+              <button 
+                className="border-2 border-white text-white hover:bg-white hover:text-green-700 py-6 text-lg flex flex-col items-center gap-2 h-auto rounded-md transition-colors font-medium"
                 onClick={() => window.open('https://wa.link/ykjebj', '_blank')}
               >
                 <Phone className="w-8 h-8" />
                 <span>Contáctanos</span>
-              </Button>
+              </button>
             </div>
           </div>
         </main>
