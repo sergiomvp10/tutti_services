@@ -1,0 +1,844 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import { Product, Category, Promotion, Order, User } from '../types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Package,
+  ShoppingBag,
+  Tag,
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  LogOut,
+  Search,
+  FolderOpen,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Truck
+} from 'lucide-react';
+
+const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  'pendiente': { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
+  'confirmado': { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'en_proceso': { label: 'En Proceso', color: 'bg-purple-500', icon: <Package className="w-4 h-4" /> },
+  'enviado': { label: 'Enviado', color: 'bg-indigo-500', icon: <Truck className="w-4 h-4" /> },
+  'entregado': { label: 'Entregado', color: 'bg-green-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'cancelado': { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="w-4 h-4" /> },
+};
+
+export const AdminPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('products');
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showPromotionDialog, setShowPromotionDialog] = useState(false);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  
+  const [productForm, setProductForm] = useState({
+    name: '', description: '', price: '', unit: 'kg', category_id: '',
+    image_url: '', image_url_2: '', stock: '', min_order: '1'
+  });
+  
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', image_url: '' });
+  
+  const [promotionForm, setPromotionForm] = useState({
+    name: '', description: '', discount_percent: '', product_id: '', category_id: '',
+    start_date: '', end_date: '', is_active: true
+  });
+
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      navigate('/catalog');
+      return;
+    }
+    loadData();
+  }, [user, navigate]);
+
+  const loadData = async () => {
+    try {
+      const [productsData, categoriesData, promotionsData, ordersData, usersData] = await Promise.all([
+        api.getProducts({ active_only: false }),
+        api.getCategories(),
+        api.getPromotions(false),
+        api.getOrders(),
+        api.getUsers(),
+      ]);
+      setProducts(productsData);
+      setCategories(categoriesData);
+      setPromotions(promotionsData);
+      setOrders(ordersData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CO', {
+      year: 'numeric', month: 'short', day: 'numeric',
+    });
+  };
+
+  const handleSaveProduct = async () => {
+    try {
+      const data = {
+        name: productForm.name,
+        description: productForm.description,
+        price: parseFloat(productForm.price),
+        unit: productForm.unit,
+        category_id: productForm.category_id ? parseInt(productForm.category_id) : null,
+        image_url: productForm.image_url,
+        image_url_2: productForm.image_url_2,
+        stock: parseFloat(productForm.stock) || 0,
+        min_order: parseFloat(productForm.min_order) || 1,
+      };
+      
+      if (editingProduct) {
+        await api.updateProduct(editingProduct.id, data);
+      } else {
+        await api.createProduct(data);
+      }
+      
+      await loadData();
+      setShowProductDialog(false);
+      resetProductForm();
+    } catch (error) {
+      console.error('Error saving product:', error);
+    }
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    if (confirm('¿Estas seguro de eliminar este producto?')) {
+      try {
+        await api.deleteProduct(id);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
+    }
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      if (editingCategory) {
+        await api.updateCategory(editingCategory.id, categoryForm);
+      } else {
+        await api.createCategory(categoryForm);
+      }
+      await loadData();
+      setShowCategoryDialog(false);
+      resetCategoryForm();
+    } catch (error) {
+      console.error('Error saving category:', error);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (confirm('¿Estas seguro de eliminar esta categoria?')) {
+      try {
+        await api.deleteCategory(id);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting category:', error);
+      }
+    }
+  };
+
+  const handleSavePromotion = async () => {
+    try {
+      const data = {
+        name: promotionForm.name,
+        description: promotionForm.description,
+        discount_percent: parseFloat(promotionForm.discount_percent),
+        product_id: promotionForm.product_id ? parseInt(promotionForm.product_id) : null,
+        category_id: promotionForm.category_id ? parseInt(promotionForm.category_id) : null,
+        start_date: promotionForm.start_date,
+        end_date: promotionForm.end_date,
+        is_active: promotionForm.is_active,
+      };
+      
+      if (editingPromotion) {
+        await api.updatePromotion(editingPromotion.id, data);
+      } else {
+        await api.createPromotion(data);
+      }
+      
+      await loadData();
+      setShowPromotionDialog(false);
+      resetPromotionForm();
+    } catch (error) {
+      console.error('Error saving promotion:', error);
+    }
+  };
+
+  const handleDeletePromotion = async (id: number) => {
+    if (confirm('¿Estas seguro de eliminar esta promocion?')) {
+      try {
+        await api.deletePromotion(id);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting promotion:', error);
+      }
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: number, status: string) => {
+    try {
+      await api.updateOrderStatus(orderId, status);
+      await loadData();
+      setShowOrderDialog(false);
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  const resetProductForm = () => {
+    setProductForm({ name: '', description: '', price: '', unit: 'kg', category_id: '', image_url: '', image_url_2: '', stock: '', min_order: '1' });
+    setEditingProduct(null);
+  };
+
+  const resetCategoryForm = () => {
+    setCategoryForm({ name: '', description: '', image_url: '' });
+    setEditingCategory(null);
+  };
+
+  const resetPromotionForm = () => {
+    setPromotionForm({ name: '', description: '', discount_percent: '', product_id: '', category_id: '', start_date: '', end_date: '', is_active: true });
+    setEditingPromotion(null);
+  };
+
+  const openEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      unit: product.unit,
+      category_id: product.category_id?.toString() || '',
+      image_url: product.image_url || '',
+      image_url_2: product.image_url_2 || '',
+      stock: product.stock.toString(),
+      min_order: product.min_order.toString(),
+    });
+    setShowProductDialog(true);
+  };
+
+  const openEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryForm({
+      name: category.name,
+      description: category.description || '',
+      image_url: category.image_url || '',
+    });
+    setShowCategoryDialog(true);
+  };
+
+  const openEditPromotion = (promotion: Promotion) => {
+    setEditingPromotion(promotion);
+    setPromotionForm({
+      name: promotion.name,
+      description: promotion.description || '',
+      discount_percent: promotion.discount_percent.toString(),
+      product_id: promotion.product_id?.toString() || '',
+      category_id: promotion.category_id?.toString() || '',
+      start_date: promotion.start_date.split('T')[0],
+      end_date: promotion.end_date.split('T')[0],
+      is_active: promotion.is_active,
+    });
+    setShowPromotionDialog(true);
+  };
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredOrders = orders.filter(o => 
+    o.id.toString().includes(searchQuery) || 
+    o.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-xl text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-green-700 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Package className="w-10 h-10" />
+              <div>
+                <h1 className="text-2xl font-bold">Panel de Administracion</h1>
+                <p className="text-green-200 text-sm">Tutti Services</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-green-200">{user?.name}</span>
+              <Button variant="ghost" className="text-white hover:bg-green-800" onClick={logout}>
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid grid-cols-5 mb-6">
+            <TabsTrigger value="products" className="flex items-center gap-2">
+              <Package className="w-4 h-4" /> Productos
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4" /> Categorias
+            </TabsTrigger>
+            <TabsTrigger value="promotions" className="flex items-center gap-2">
+              <Tag className="w-4 h-4" /> Promociones
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4" /> Pedidos
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="w-4 h-4" /> Clientes
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Products Tab */}
+          <TabsContent value="products">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Productos ({products.length})</CardTitle>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 w-64"
+                    />
+                  </div>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetProductForm(); setShowProductDialog(true); }}>
+                    <Plus className="w-4 h-4 mr-2" /> Nuevo Producto
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3">Producto</th>
+                        <th className="text-left p-3">Categoria</th>
+                        <th className="text-right p-3">Precio</th>
+                        <th className="text-right p-3">Stock</th>
+                        <th className="text-center p-3">Estado</th>
+                        <th className="text-center p-3">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((product) => (
+                        <tr key={product.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden">
+                                {product.image_url ? (
+                                  <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package className="w-6 h-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium">{product.name}</p>
+                                <p className="text-sm text-gray-500">{product.unit}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3">{product.category_name || '-'}</td>
+                          <td className="p-3 text-right font-medium">{formatPrice(product.price)}</td>
+                          <td className="p-3 text-right">{product.stock}</td>
+                          <td className="p-3 text-center">
+                            <Badge className={product.is_active ? 'bg-green-500' : 'bg-gray-400'}>
+                              {product.is_active ? 'Activo' : 'Inactivo'}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Button variant="ghost" size="sm" onClick={() => openEditProduct(product)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteProduct(product.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Categorias ({categories.length})</CardTitle>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetCategoryForm(); setShowCategoryDialog(true); }}>
+                  <Plus className="w-4 h-4 mr-2" /> Nueva Categoria
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {categories.map((category) => (
+                    <Card key={category.id} className="overflow-hidden">
+                      <div className="h-32 bg-gray-200">
+                        {category.image_url ? (
+                          <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <FolderOpen className="w-12 h-12 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-bold text-lg">{category.name}</h3>
+                        <p className="text-gray-500 text-sm">{category.description || 'Sin descripcion'}</p>
+                        <div className="flex gap-2 mt-3">
+                          <Button variant="outline" size="sm" onClick={() => openEditCategory(category)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDeleteCategory(category.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Promotions Tab */}
+          <TabsContent value="promotions">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Promociones ({promotions.length})</CardTitle>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={() => { resetPromotionForm(); setShowPromotionDialog(true); }}>
+                  <Plus className="w-4 h-4 mr-2" /> Nueva Promocion
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3">Promocion</th>
+                        <th className="text-left p-3">Aplica a</th>
+                        <th className="text-center p-3">Descuento</th>
+                        <th className="text-left p-3">Vigencia</th>
+                        <th className="text-center p-3">Estado</th>
+                        <th className="text-center p-3">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {promotions.map((promo) => (
+                        <tr key={promo.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3">
+                            <p className="font-medium">{promo.name}</p>
+                            <p className="text-sm text-gray-500">{promo.description}</p>
+                          </td>
+                          <td className="p-3">
+                            {promo.product_name || promo.category_name || 'General'}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className="bg-red-500 text-white text-lg">-{promo.discount_percent}%</Badge>
+                          </td>
+                          <td className="p-3">
+                            {formatDate(promo.start_date)} - {formatDate(promo.end_date)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className={promo.is_active ? 'bg-green-500' : 'bg-gray-400'}>
+                              {promo.is_active ? 'Activa' : 'Inactiva'}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Button variant="ghost" size="sm" onClick={() => openEditPromotion(promo)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeletePromotion(promo.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Orders Tab */}
+          <TabsContent value="orders">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Pedidos ({orders.length})</CardTitle>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Buscar por # o cliente..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3"># Pedido</th>
+                        <th className="text-left p-3">Cliente</th>
+                        <th className="text-left p-3">Fecha</th>
+                        <th className="text-right p-3">Total</th>
+                        <th className="text-center p-3">Estado</th>
+                        <th className="text-center p-3">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => {
+                        const status = statusConfig[order.status] || statusConfig['pendiente'];
+                        return (
+                          <tr key={order.id} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-bold">#{order.id}</td>
+                            <td className="p-3">
+                              <p className="font-medium">{order.user_name}</p>
+                              <p className="text-sm text-gray-500">{order.user_phone}</p>
+                            </td>
+                            <td className="p-3">{formatDate(order.created_at)}</td>
+                            <td className="p-3 text-right font-bold text-green-600">{formatPrice(order.total)}</td>
+                            <td className="p-3 text-center">
+                              <Badge className={`${status.color} text-white flex items-center gap-1 justify-center`}>
+                                {status.icon} {status.label}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-center">
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setShowOrderDialog(true); }}>
+                                Ver Detalles
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>Clientes ({users.filter(u => u.role === 'buyer').length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-3">Nombre</th>
+                        <th className="text-left p-3">Email</th>
+                        <th className="text-left p-3">Telefono</th>
+                        <th className="text-left p-3">Direccion</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.filter(u => u.role === 'buyer').map((u) => (
+                        <tr key={u.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3 font-medium">{u.name}</td>
+                          <td className="p-3">{u.email}</td>
+                          <td className="p-3">{u.phone || '-'}</td>
+                          <td className="p-3">{u.address || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Product Dialog */}
+      <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingProduct ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <Input value={productForm.name} onChange={(e) => setProductForm({...productForm, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Descripcion</label>
+              <Textarea value={productForm.description} onChange={(e) => setProductForm({...productForm, description: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Precio *</label>
+                <Input type="number" value={productForm.price} onChange={(e) => setProductForm({...productForm, price: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Unidad</label>
+                <Select value={productForm.unit} onValueChange={(v) => setProductForm({...productForm, unit: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">Kilogramo (kg)</SelectItem>
+                    <SelectItem value="lb">Libra (lb)</SelectItem>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                    <SelectItem value="caja">Caja</SelectItem>
+                    <SelectItem value="bulto">Bulto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Categoria</label>
+              <Select value={productForm.category_id} onValueChange={(v) => setProductForm({...productForm, category_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar categoria" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Stock</label>
+                <Input type="number" value={productForm.stock} onChange={(e) => setProductForm({...productForm, stock: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Pedido Minimo</label>
+                <Input type="number" value={productForm.min_order} onChange={(e) => setProductForm({...productForm, min_order: e.target.value})} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">URL Imagen 1</label>
+              <Input value={productForm.image_url} onChange={(e) => setProductForm({...productForm, image_url: e.target.value})} placeholder="https://..." />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">URL Imagen 2 (opcional)</label>
+              <Input value={productForm.image_url_2} onChange={(e) => setProductForm({...productForm, image_url_2: e.target.value})} placeholder="https://..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProductDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveProduct}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category Dialog */}
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCategory ? 'Editar Categoria' : 'Nueva Categoria'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <Input value={categoryForm.name} onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Descripcion</label>
+              <Textarea value={categoryForm.description} onChange={(e) => setCategoryForm({...categoryForm, description: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">URL Imagen</label>
+              <Input value={categoryForm.image_url} onChange={(e) => setCategoryForm({...categoryForm, image_url: e.target.value})} placeholder="https://..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveCategory}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Promotion Dialog */}
+      <Dialog open={showPromotionDialog} onOpenChange={setShowPromotionDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingPromotion ? 'Editar Promocion' : 'Nueva Promocion'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <Input value={promotionForm.name} onChange={(e) => setPromotionForm({...promotionForm, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Descripcion</label>
+              <Textarea value={promotionForm.description} onChange={(e) => setPromotionForm({...promotionForm, description: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Porcentaje de Descuento *</label>
+              <Input type="number" value={promotionForm.discount_percent} onChange={(e) => setPromotionForm({...promotionForm, discount_percent: e.target.value})} placeholder="10" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Aplicar a Producto (opcional)</label>
+              <Select value={promotionForm.product_id} onValueChange={(v) => setPromotionForm({...promotionForm, product_id: v, category_id: ''})}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Ninguno</SelectItem>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">O Aplicar a Categoria (opcional)</label>
+              <Select value={promotionForm.category_id} onValueChange={(v) => setPromotionForm({...promotionForm, category_id: v, product_id: ''})}>
+                <SelectTrigger><SelectValue placeholder="Seleccionar categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Ninguna</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Fecha Inicio *</label>
+                <Input type="date" value={promotionForm.start_date} onChange={(e) => setPromotionForm({...promotionForm, start_date: e.target.value})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Fecha Fin *</label>
+                <Input type="date" value={promotionForm.end_date} onChange={(e) => setPromotionForm({...promotionForm, end_date: e.target.value})} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPromotionDialog(false)}>Cancelar</Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSavePromotion}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Detail Dialog */}
+      <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Pedido #{selectedOrder?.id}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-bold mb-2">Cliente:</h4>
+                <p>{selectedOrder.user_name}</p>
+                <p className="text-gray-500">{selectedOrder.user_phone}</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold mb-2">Productos:</h4>
+                {selectedOrder.items.map((item) => (
+                  <div key={item.id} className="flex justify-between p-2 border-b">
+                    <div>
+                      <p>{item.product_name}</p>
+                      <p className="text-sm text-gray-500">{item.quantity} unidades</p>
+                    </div>
+                    <p className="font-bold">{formatPrice(item.subtotal)}</p>
+                  </div>
+                ))}
+              </div>
+
+              {selectedOrder.notes && (
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <h4 className="font-bold mb-2">Notas:</h4>
+                  <p>{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              <div className="flex justify-between text-xl font-bold border-t pt-4">
+                <span>Total:</span>
+                <span className="text-green-600">{formatPrice(selectedOrder.total)}</span>
+              </div>
+
+              <div>
+                <h4 className="font-bold mb-2">Cambiar Estado:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(statusConfig).map(([key, config]) => (
+                    <Button
+                      key={key}
+                      variant={selectedOrder.status === key ? "default" : "outline"}
+                      className={selectedOrder.status === key ? config.color : ''}
+                      onClick={() => handleUpdateOrderStatus(selectedOrder.id, key)}
+                    >
+                      {config.icon}
+                      <span className="ml-2">{config.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
