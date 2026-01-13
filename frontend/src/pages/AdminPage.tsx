@@ -487,7 +487,7 @@ export const AdminPage: React.FC = () => {
 
   const filteredOrders = orders.filter(o => 
     o.id.toString().includes(searchQuery) || 
-    o.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (o.user_name || o.guest_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -1243,8 +1243,18 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-bold mb-2">Cliente:</h4>
-                <p>{selectedOrder.user_name}</p>
-                <p className="text-gray-500">{selectedOrder.user_phone}</p>
+                <p>{selectedOrder.user_name || selectedOrder.guest_name}</p>
+                <p className="text-gray-500">{selectedOrder.user_phone || selectedOrder.guest_phone}</p>
+                {(selectedOrder.guest_address || selectedOrder.user_address) && (
+                  <p className="text-gray-500 mt-1">
+                    <span className="font-medium">Dirección:</span> {selectedOrder.guest_address || selectedOrder.user_address}
+                  </p>
+                )}
+                {selectedOrder.payment_method && (
+                  <p className="text-gray-500 mt-1">
+                    <span className="font-medium">Forma de Pago:</span> {selectedOrder.payment_method}
+                  </p>
+                )}
               </div>
               
               <div>

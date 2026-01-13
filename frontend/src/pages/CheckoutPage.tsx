@@ -27,7 +27,6 @@ export const CheckoutPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [orderId, setOrderId] = useState<number | null>(null);
   
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
@@ -65,8 +64,7 @@ export const CheckoutPage: React.FC = () => {
           notes: notes,
         };
         
-        const order = await api.createOrder(orderData);
-        setOrderId(order.id);
+        await api.createOrder(orderData);
       } else {
         const guestOrderData = {
           guest_name: guestName,
@@ -80,8 +78,7 @@ export const CheckoutPage: React.FC = () => {
           notes: notes,
         };
         
-        const order = await api.guestCreateOrder(guestOrderData);
-        setOrderId(order.id);
+        await api.guestCreateOrder(guestOrderData);
       }
       
       setSuccess(true);
@@ -105,7 +102,6 @@ export const CheckoutPage: React.FC = () => {
             <p className="text-xl text-green-600 font-semibold mb-4">
               Su pedido ha sido recibido y esta siendo preparado!
             </p>
-            <p className="text-gray-500 mb-2">Pedido #{orderId}</p>
             <p className="text-gray-500 mb-8">Pronto nos pondremos en contacto contigo para confirmar tu pedido.</p>
             <div className="space-y-3">
               <Button
