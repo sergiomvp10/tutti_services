@@ -522,6 +522,45 @@ async def cancel_order(
     
     return {"message": "Pedido cancelado exitosamente"}
 
+@router.delete("/{order_id}/permanent")
+async def delete_order_permanent(
+    order_id: int,
+    admin: dict = Depends(get_admin_user),
+    db: aiosqlite.Connection = Depends(get_db)
+):
+    """Permanently delete an order (admin only)"""
+    cursor = await db.execute(
+        "SELECT id, status FROM orders WHERE id = ?",
+        (order_id,)
+    )
+    order = await cursor.fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    
+    # If order was confirmed, restore stock before deleting
+    if order['status'] == 'confirmed':
+        cursor = await db.execute("""
+            SELECT oi.product_id, oi.quantity
+            FROM order_items oi
+            WHERE oi.order_id = ?
+        """, (order_id,))
+        items = await cursor.fetchall()
+        
+        for item in items:
+            await db.execute(
+                "UPDATE products SET stock = stock + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (item['quantity'], item['product_id'])
+            )
+    
+    # Delete order items first (foreign key constraint)
+    await db.execute("DELETE FROM order_items WHERE order_id = ?", (order_id,))
+    # Delete the order
+    await db.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+    await db.commit()
+    
+    return {"message": "Pedido eliminado permanentemente"}
+
 @router.post("/guest", response_model=GuestOrderResponse)
 async def guest_create_order(
     order: GuestOrderCreate,

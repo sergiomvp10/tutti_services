@@ -209,6 +209,14 @@ export const api = {
       if (!response.ok) throw new Error('Error al cancelar pedido');
     },
 
+    async deleteOrder(id: number): Promise<void> {
+      const response = await fetch(`${API_URL}/orders/${id}/permanent`, {
+        method: 'DELETE',
+        headers: getHeaders(true),
+      });
+      if (!response.ok) throw new Error('Error al eliminar pedido');
+    },
+
         async adminCreateOrder(data: { user_id: number; items: { product_id: number; quantity: number }[]; notes?: string }): Promise<Order> {
           const response = await fetch(`${API_URL}/orders/admin`, {
             method: 'POST',

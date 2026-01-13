@@ -309,6 +309,17 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleDeleteOrder = async (orderId: number) => {
+    if (confirm('¿Estás seguro de eliminar este pedido permanentemente?')) {
+      try {
+        await api.deleteOrder(orderId);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting order:', error);
+      }
+    }
+  };
+
   const resetProductForm = () => {
     setProductForm({ name: '', description: '', price: '', unit: 'kg', category_id: '', image_url: '', image_url_2: '', stock: '', min_order: '1' });
     setEditingProduct(null);
@@ -778,9 +789,14 @@ export const AdminPage: React.FC = () => {
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setShowOrderDialog(true); }}>
-                                Ver Detalles
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setShowOrderDialog(true); }}>
+                                  Ver Detalles
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteOrder(order.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
