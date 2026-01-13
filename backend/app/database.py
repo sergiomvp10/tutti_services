@@ -94,7 +94,11 @@ async def init_db():
         await db.execute("""
             CREATE TABLE IF NOT EXISTS orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
+                user_id INTEGER,
+                guest_name TEXT,
+                guest_phone TEXT,
+                guest_address TEXT,
+                payment_method TEXT,
                 status TEXT DEFAULT 'pending',
                 total REAL NOT NULL,
                 notes TEXT,
@@ -103,6 +107,60 @@ async def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
+        
+        # Add guest columns if they don't exist (for existing databases)
+        try:
+            await db.execute("ALTER TABLE orders ADD COLUMN guest_name TEXT")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE orders ADD COLUMN guest_phone TEXT")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE orders ADD COLUMN guest_address TEXT")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT")
+        except:
+            pass
+        
+        # Migration: Make user_id nullable for guest orders
+        # Check if user_id column has NOT NULL constraint and fix it
+        try:
+            cursor = await db.execute("PRAGMA table_info(orders)")
+            columns = await cursor.fetchall()
+            for col in columns:
+                if col[1] == 'user_id' and col[3] == 1:  # col[3] is notnull flag
+                    # Need to recreate table to remove NOT NULL constraint
+                    await db.execute("""
+                        CREATE TABLE IF NOT EXISTS orders_new (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            user_id INTEGER,
+                            guest_name TEXT,
+                            guest_phone TEXT,
+                            guest_address TEXT,
+                            payment_method TEXT,
+                            status TEXT DEFAULT 'pending',
+                            total REAL NOT NULL,
+                            notes TEXT,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (user_id) REFERENCES users(id)
+                        )
+                    """)
+                    await db.execute("""
+                        INSERT INTO orders_new (id, user_id, guest_name, guest_phone, guest_address, payment_method, status, total, notes, created_at, updated_at)
+                        SELECT id, user_id, guest_name, guest_phone, guest_address, payment_method, status, total, notes, created_at, updated_at FROM orders
+                    """)
+                    await db.execute("DROP TABLE orders")
+                    await db.execute("ALTER TABLE orders_new RENAME TO orders")
+                    await db.commit()
+                    break
+        except Exception as e:
+            print(f"Migration error (non-critical): {e}")
+            pass
         
         await db.execute("""
             CREATE TABLE IF NOT EXISTS order_items (

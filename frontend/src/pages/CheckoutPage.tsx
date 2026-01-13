@@ -5,8 +5,11 @@ import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ShoppingCart, 
   ArrowLeft, 
@@ -25,6 +28,11 @@ export const CheckoutPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
+  
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestAddress, setGuestAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -37,20 +45,45 @@ export const CheckoutPage: React.FC = () => {
   const handleSubmitOrder = async () => {
     if (items.length === 0) return;
     
+    if (!user) {
+      if (!guestName || !guestPhone || !guestAddress || !paymentMethod) {
+        setError('Por favor completa todos los campos requeridos');
+        return;
+      }
+    }
+    
     setIsLoading(true);
     setError('');
     
     try {
-      const orderData = {
-        items: items.map(item => ({
-          product_id: item.product.id,
-          quantity: item.quantity,
-        })),
-        notes: notes,
-      };
+      if (user) {
+        const orderData = {
+          items: items.map(item => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+          })),
+          notes: notes,
+        };
+        
+        const order = await api.createOrder(orderData);
+        setOrderId(order.id);
+      } else {
+        const guestOrderData = {
+          guest_name: guestName,
+          guest_phone: guestPhone,
+          guest_address: guestAddress,
+          payment_method: paymentMethod,
+          items: items.map(item => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+          })),
+          notes: notes,
+        };
+        
+        const order = await api.guestCreateOrder(guestOrderData);
+        setOrderId(order.id);
+      }
       
-      const order = await api.createOrder(orderData);
-      setOrderId(order.id);
       setSuccess(true);
       clearCart();
     } catch (err) {
@@ -65,11 +98,14 @@ export const CheckoutPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center">
           <CardContent className="pt-8 pb-8">
-            <div className="mx-auto bg-green-100 text-green-600 p-6 rounded-full w-24 h-24 flex items-center justify-center mb-6">
-              <CheckCircle className="w-16 h-16" />
+            <div className="mx-auto bg-green-100 text-green-600 p-6 rounded-full w-32 h-32 flex items-center justify-center mb-6">
+              <CheckCircle className="w-20 h-20" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Pedido Realizado</h2>
-            <p className="text-xl text-gray-600 mb-2">Tu pedido #{orderId} ha sido recibido</p>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Pedido Recibido</h2>
+            <p className="text-xl text-green-600 font-semibold mb-4">
+              Su pedido ha sido recibido y esta siendo preparado!
+            </p>
+            <p className="text-gray-500 mb-2">Pedido #{orderId}</p>
             <p className="text-gray-500 mb-8">Pronto nos pondremos en contacto contigo para confirmar tu pedido.</p>
             <div className="space-y-3">
               <Button
@@ -78,13 +114,15 @@ export const CheckoutPage: React.FC = () => {
               >
                 Seguir Comprando
               </Button>
-              <Button
-                variant="outline"
-                className="w-full text-lg py-4"
-                onClick={() => navigate('/orders')}
-              >
-                Ver Mis Pedidos
-              </Button>
+              {user && (
+                <Button
+                  variant="outline"
+                  className="w-full text-lg py-4"
+                  onClick={() => navigate('/orders')}
+                >
+                  Ver Mis Pedidos
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -173,26 +211,82 @@ export const CheckoutPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Customer Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Datos del Cliente</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-lg">
-                  <span className="text-gray-600">Nombre:</span>
-                  <span className="font-medium">{user?.name}</span>
-                </div>
-                <div className="flex justify-between text-lg">
-                  <span className="text-gray-600">Telefono:</span>
-                  <span className="font-medium">{user?.phone || 'No registrado'}</span>
-                </div>
-                <div className="flex justify-between text-lg">
-                  <span className="text-gray-600">Direccion:</span>
-                  <span className="font-medium">{user?.address || 'No registrada'}</span>
-                </div>
-              </CardContent>
-            </Card>
+                        {/* Customer Info */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-xl">
+                              {user ? 'Datos del Cliente' : 'Tus Datos'}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {user ? (
+                              <>
+                                <div className="flex justify-between text-lg">
+                                  <span className="text-gray-600">Nombre:</span>
+                                  <span className="font-medium">{user?.name}</span>
+                                </div>
+                                <div className="flex justify-between text-lg">
+                                  <span className="text-gray-600">Telefono:</span>
+                                  <span className="font-medium">{user?.phone || 'No registrado'}</span>
+                                </div>
+                                <div className="flex justify-between text-lg">
+                                  <span className="text-gray-600">Direccion:</span>
+                                  <span className="font-medium">{user?.address || 'No registrada'}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="space-y-2">
+                                  <Label htmlFor="guestName" className="text-lg">Nombre *</Label>
+                                  <Input
+                                    id="guestName"
+                                    value={guestName}
+                                    onChange={(e) => setGuestName(e.target.value)}
+                                    placeholder="Tu nombre completo"
+                                    className="text-lg py-6"
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="guestPhone" className="text-lg">Telefono *</Label>
+                                  <Input
+                                    id="guestPhone"
+                                    value={guestPhone}
+                                    onChange={(e) => setGuestPhone(e.target.value)}
+                                    placeholder="Tu numero de telefono"
+                                    className="text-lg py-6"
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="guestAddress" className="text-lg">Direccion *</Label>
+                                  <Input
+                                    id="guestAddress"
+                                    value={guestAddress}
+                                    onChange={(e) => setGuestAddress(e.target.value)}
+                                    placeholder="Tu direccion de entrega"
+                                    className="text-lg py-6"
+                                    required
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="paymentMethod" className="text-lg">Forma de Pago *</Label>
+                                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                    <SelectTrigger className="text-lg py-6">
+                                      <SelectValue placeholder="Selecciona forma de pago" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                                      <SelectItem value="transferencia">Transferencia Bancaria</SelectItem>
+                                      <SelectItem value="nequi">Nequi</SelectItem>
+                                      <SelectItem value="daviplata">Daviplata</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
 
             {/* Notes */}
             <Card>
