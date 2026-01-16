@@ -35,12 +35,12 @@ import {
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  'pendiente': { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
-  'confirmado': { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="w-4 h-4" /> },
-  'en_proceso': { label: 'En Proceso', color: 'bg-purple-500', icon: <Package className="w-4 h-4" /> },
-  'enviado': { label: 'Enviado', color: 'bg-indigo-500', icon: <Truck className="w-4 h-4" /> },
-  'entregado': { label: 'Entregado', color: 'bg-green-500', icon: <CheckCircle className="w-4 h-4" /> },
-  'cancelado': { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="w-4 h-4" /> },
+  'pending': { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
+  'confirmed': { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'preparing': { label: 'En Proceso', color: 'bg-purple-500', icon: <Package className="w-4 h-4" /> },
+  'ready': { label: 'Listo', color: 'bg-indigo-500', icon: <Truck className="w-4 h-4" /> },
+  'delivered': { label: 'Entregado', color: 'bg-green-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'cancelled': { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="w-4 h-4" /> },
 };
 
 export const AdminPage: React.FC = () => {
@@ -773,7 +773,7 @@ export const AdminPage: React.FC = () => {
                     </thead>
                     <tbody>
                       {filteredOrders.map((order) => {
-                        const status = statusConfig[order.status] || statusConfig['pendiente'];
+                        const status = statusConfig[order.status] || statusConfig['pending'];
                         return (
                           <tr key={order.id} className="border-b hover:bg-gray-50">
                             <td className="p-3 font-bold">#{order.id}</td>
