@@ -35,12 +35,12 @@ import {
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  'pendiente': { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
-  'confirmado': { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="w-4 h-4" /> },
-  'en_proceso': { label: 'En Proceso', color: 'bg-purple-500', icon: <Package className="w-4 h-4" /> },
-  'enviado': { label: 'Enviado', color: 'bg-indigo-500', icon: <Truck className="w-4 h-4" /> },
-  'entregado': { label: 'Entregado', color: 'bg-green-500', icon: <CheckCircle className="w-4 h-4" /> },
-  'cancelado': { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="w-4 h-4" /> },
+  'pending': { label: 'Pendiente', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
+  'confirmed': { label: 'Confirmado', color: 'bg-blue-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'preparing': { label: 'En Proceso', color: 'bg-purple-500', icon: <Package className="w-4 h-4" /> },
+  'ready': { label: 'Listo', color: 'bg-indigo-500', icon: <Truck className="w-4 h-4" /> },
+  'delivered': { label: 'Entregado', color: 'bg-green-500', icon: <CheckCircle className="w-4 h-4" /> },
+  'cancelled': { label: 'Cancelado', color: 'bg-red-500', icon: <XCircle className="w-4 h-4" /> },
 };
 
 export const AdminPage: React.FC = () => {
@@ -309,6 +309,17 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleDeleteOrder = async (orderId: number) => {
+    if (confirm('¿Estás seguro de eliminar este pedido permanentemente?')) {
+      try {
+        await api.deleteOrder(orderId);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting order:', error);
+      }
+    }
+  };
+
   const resetProductForm = () => {
     setProductForm({ name: '', description: '', price: '', unit: 'kg', category_id: '', image_url: '', image_url_2: '', stock: '', min_order: '1' });
     setEditingProduct(null);
@@ -487,7 +498,7 @@ export const AdminPage: React.FC = () => {
 
   const filteredOrders = orders.filter(o => 
     o.id.toString().includes(searchQuery) || 
-    o.user_name.toLowerCase().includes(searchQuery.toLowerCase())
+    (o.user_name || o.guest_name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -762,7 +773,7 @@ export const AdminPage: React.FC = () => {
                     </thead>
                     <tbody>
                       {filteredOrders.map((order) => {
-                        const status = statusConfig[order.status] || statusConfig['pendiente'];
+                        const status = statusConfig[order.status] || statusConfig['pending'];
                         return (
                           <tr key={order.id} className="border-b hover:bg-gray-50">
                             <td className="p-3 font-bold">#{order.id}</td>
@@ -778,9 +789,14 @@ export const AdminPage: React.FC = () => {
                               </Badge>
                             </td>
                             <td className="p-3 text-center">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setShowOrderDialog(true); }}>
-                                Ver Detalles
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => { setSelectedOrder(order); setShowOrderDialog(true); }}>
+                                  Ver Detalles
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteOrder(order.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1243,8 +1259,18 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-bold mb-2">Cliente:</h4>
-                <p>{selectedOrder.user_name}</p>
-                <p className="text-gray-500">{selectedOrder.user_phone}</p>
+                <p>{selectedOrder.user_name || selectedOrder.guest_name}</p>
+                <p className="text-gray-500">{selectedOrder.user_phone || selectedOrder.guest_phone}</p>
+                {(selectedOrder.guest_address || selectedOrder.user_address) && (
+                  <p className="text-gray-500 mt-1">
+                    <span className="font-medium">Dirección:</span> {selectedOrder.guest_address || selectedOrder.user_address}
+                  </p>
+                )}
+                {selectedOrder.payment_method && (
+                  <p className="text-gray-500 mt-1">
+                    <span className="font-medium">Forma de Pago:</span> {selectedOrder.payment_method}
+                  </p>
+                )}
               </div>
               
               <div>

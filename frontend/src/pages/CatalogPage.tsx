@@ -71,17 +71,13 @@ export const CatalogPage: React.FC = () => {
     }
   };
 
-  const handleAddToCart = () => {
-    if (!user) {
-      window.location.href = '/login';
-      return;
-    }
-    if (selectedProduct) {
-      addToCart(selectedProduct, quantity);
-      setSelectedProduct(null);
-      setQuantity(1);
-    }
-  };
+    const handleAddToCart = () => {
+      if (selectedProduct) {
+        addToCart(selectedProduct, quantity);
+        setSelectedProduct(null);
+        setQuantity(1);
+      }
+    };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -104,43 +100,43 @@ export const CatalogPage: React.FC = () => {
                 <p className="text-green-100 text-sm">Catalogo de Productos</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              {user ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:bg-green-700 relative"
-                    onClick={() => setShowCart(true)}
-                  >
-                    <ShoppingCart className="w-8 h-8" />
-                    {itemCount > 0 && (
-                      <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-lg px-2">
-                        {itemCount}
-                      </Badge>
-                    )}
-                  </Button>
-                  <div className="hidden md:flex items-center gap-2 text-green-100">
-                    <User className="w-5 h-5" />
-                    <span>{user?.name}</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:bg-green-700"
-                    onClick={logout}
-                  >
-                    <LogOut className="w-6 h-6" />
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="text-white hover:bg-green-700 bg-green-700"
-                  onClick={() => window.location.href = '/login'}
-                >
-                  Iniciar Sesión
-                </Button>
-              )}
-            </div>
+                        <div className="flex items-center gap-4">
+                          <Button
+                            variant="ghost"
+                            className="text-white hover:bg-green-700 relative"
+                            onClick={() => setShowCart(true)}
+                          >
+                            <ShoppingCart className="w-8 h-8" />
+                            {itemCount > 0 && (
+                              <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-lg px-2">
+                                {itemCount}
+                              </Badge>
+                            )}
+                          </Button>
+                          {user ? (
+                            <>
+                              <div className="hidden md:flex items-center gap-2 text-green-100">
+                                <User className="w-5 h-5" />
+                                <span>{user?.name}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                className="text-white hover:bg-green-700"
+                                onClick={logout}
+                              >
+                                <LogOut className="w-6 h-6" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              className="text-white hover:bg-green-700 bg-green-700"
+                              onClick={() => window.location.href = '/login'}
+                            >
+                              Iniciar Sesión
+                            </Button>
+                          )}
+                        </div>
           </div>
         </div>
       </header>
@@ -230,19 +226,15 @@ export const CatalogPage: React.FC = () => {
                     </Badge>
                   )}
                 </div>
-                <button
-                  className="absolute top-2 right-2 w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!user) {
-                      window.location.href = '/login';
-                      return;
-                    }
-                    addToCart(product, product.min_order);
-                  }}
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+                                <button
+                                  className="absolute top-2 right-2 w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110 z-10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addToCart(product, product.min_order);
+                                  }}
+                                >
+                                  <Plus className="w-5 h-5" />
+                                </button>
                 <CardContent 
                   className="p-3 cursor-pointer"
                   onClick={() => {

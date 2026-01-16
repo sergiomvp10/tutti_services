@@ -59,9 +59,14 @@ export interface OrderItem {
 
 export interface Order {
   id: number;
-  user_id: number;
-  user_name: string;
+  user_id: number | null;
+  user_name: string | null;
   user_phone: string | null;
+  user_address: string | null;
+  guest_name: string | null;
+  guest_phone: string | null;
+  guest_address: string | null;
+  payment_method: string | null;
   status: string;
   total: number;
   notes: string | null;

@@ -209,20 +209,48 @@ export const api = {
       if (!response.ok) throw new Error('Error al cancelar pedido');
     },
 
-    async adminCreateOrder(data: { user_id: number; items: { product_id: number; quantity: number }[]; notes?: string }): Promise<Order> {
-      const response = await fetch(`${API_URL}/orders/admin`, {
-        method: 'POST',
+    async deleteOrder(id: number): Promise<void> {
+      const response = await fetch(`${API_URL}/orders/${id}/permanent`, {
+        method: 'DELETE',
         headers: getHeaders(true),
-        body: JSON.stringify(data),
       });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Error al crear pedido');
-      }
-      return response.json();
+      if (!response.ok) throw new Error('Error al eliminar pedido');
     },
 
-    async getUsers(role?: string): Promise<User[]> {
+        async adminCreateOrder(data: { user_id: number; items: { product_id: number; quantity: number }[]; notes?: string }): Promise<Order> {
+          const response = await fetch(`${API_URL}/orders/admin`, {
+            method: 'POST',
+            headers: getHeaders(true),
+            body: JSON.stringify(data),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al crear pedido');
+          }
+          return response.json();
+        },
+
+        async guestCreateOrder(data: { 
+          guest_name: string; 
+          guest_phone: string; 
+          guest_address: string; 
+          payment_method: string; 
+          items: { product_id: number; quantity: number }[]; 
+          notes?: string 
+        }): Promise<Order> {
+          const response = await fetch(`${API_URL}/orders/guest`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(data),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al crear pedido');
+          }
+          return response.json();
+        },
+
+        async getUsers(role?: string): Promise<User[]> {
     const url = role ? `${API_URL}/users?role=${role}` : `${API_URL}/users`;
     const response = await fetch(url, {
       headers: getHeaders(true),
