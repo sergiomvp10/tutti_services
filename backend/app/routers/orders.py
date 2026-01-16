@@ -363,9 +363,10 @@ async def update_order_status(
     
     cursor = await db.execute("""
         SELECT o.id, o.user_id, u.name as user_name, u.phone as user_phone,
+               o.guest_name, o.guest_phone, o.guest_address, o.payment_method,
                o.status, o.total, o.notes, o.created_at
         FROM orders o
-        JOIN users u ON o.user_id = u.id
+        LEFT JOIN users u ON o.user_id = u.id
         WHERE o.id = ?
     """, (order_id,))
     order = await cursor.fetchone()
@@ -379,11 +380,18 @@ async def update_order_status(
     """, (order_id,))
     items = await cursor.fetchall()
     
+    user_name = order['user_name'] if order['user_name'] else order['guest_name'] or 'Invitado'
+    user_phone = order['user_phone'] if order['user_phone'] else order['guest_phone']
+    
     return OrderResponse(
         id=order['id'],
         user_id=order['user_id'],
-        user_name=order['user_name'],
-        user_phone=order['user_phone'],
+        user_name=user_name,
+        user_phone=user_phone,
+        guest_name=order['guest_name'],
+        guest_phone=order['guest_phone'],
+        guest_address=order['guest_address'],
+        payment_method=order['payment_method'],
         status=order['status'],
         total=order['total'],
         notes=order['notes'],

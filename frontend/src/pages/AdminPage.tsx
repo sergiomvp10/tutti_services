@@ -111,6 +111,7 @@ export const AdminPage: React.FC = () => {
     }>({ user_id: '', items: [], notes: '' });
     const [selectedProductForOrder, setSelectedProductForOrder] = useState('');
     const [quantityForOrder, setQuantityForOrder] = useState('1');
+    const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
 
   const handleImageUpload = async (file: File, imageField: 'image_url' | 'image_url_2') => {
     const setUploading = imageField === 'image_url' ? setUploadingImage1 : setUploadingImage2;
@@ -317,6 +318,37 @@ export const AdminPage: React.FC = () => {
       } catch (error) {
         console.error('Error deleting order:', error);
       }
+    }
+  };
+
+  const handleBulkDeleteOrders = async () => {
+    if (selectedOrderIds.length === 0) return;
+    if (confirm(`¿Estás seguro de eliminar ${selectedOrderIds.length} pedido(s) permanentemente?`)) {
+      try {
+        for (const orderId of selectedOrderIds) {
+          await api.deleteOrder(orderId);
+        }
+        setSelectedOrderIds([]);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting orders:', error);
+      }
+    }
+  };
+
+  const toggleOrderSelection = (orderId: number) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const toggleAllOrders = () => {
+    if (selectedOrderIds.length === filteredOrders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map(o => o.id));
     }
   };
 
@@ -744,6 +776,15 @@ export const AdminPage: React.FC = () => {
                         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                           <CardTitle>Pedidos ({orders.length})</CardTitle>
                           <div className="flex items-center gap-2 flex-wrap">
+                            {selectedOrderIds.length > 0 && (
+                              <Button 
+                                variant="destructive" 
+                                onClick={handleBulkDeleteOrders}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Eliminar ({selectedOrderIds.length})
+                              </Button>
+                            )}
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                               <Input
@@ -763,6 +804,14 @@ export const AdminPage: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                            onChange={toggleAllOrders}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </th>
                         <th className="text-left p-3"># Pedido</th>
                         <th className="text-left p-3">Cliente</th>
                         <th className="text-left p-3">Fecha</th>
@@ -775,7 +824,15 @@ export const AdminPage: React.FC = () => {
                       {filteredOrders.map((order) => {
                         const status = statusConfig[order.status] || statusConfig['pending'];
                         return (
-                          <tr key={order.id} className="border-b hover:bg-gray-50">
+                          <tr key={order.id} className={`border-b hover:bg-gray-50 ${selectedOrderIds.includes(order.id) ? 'bg-blue-50' : ''}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedOrderIds.includes(order.id)}
+                                onChange={() => toggleOrderSelection(order.id)}
+                                className="w-4 h-4 cursor-pointer"
+                              />
+                            </td>
                             <td className="p-3 font-bold">#{order.id}</td>
                             <td className="p-3">
                               <p className="font-medium">{order.user_name}</p>
