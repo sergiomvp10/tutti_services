@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Package,
   ShoppingBag,
-  Tag,
   Users,
   Plus,
   Edit,
@@ -67,6 +66,7 @@ export const AdminPage: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   
   const [productForm, setProductForm] = useState({
     name: '', description: '', price: '', unit: 'kg', category_id: '',
@@ -111,6 +111,7 @@ export const AdminPage: React.FC = () => {
     }>({ user_id: '', items: [], notes: '' });
     const [selectedProductForOrder, setSelectedProductForOrder] = useState('');
     const [quantityForOrder, setQuantityForOrder] = useState('1');
+    const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
 
   const handleImageUpload = async (file: File, imageField: 'image_url' | 'image_url_2') => {
     const setUploading = imageField === 'image_url' ? setUploadingImage1 : setUploadingImage2;
@@ -320,6 +321,37 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleBulkDeleteOrders = async () => {
+    if (selectedOrderIds.length === 0) return;
+    if (confirm(`¿Estás seguro de eliminar ${selectedOrderIds.length} pedido(s) permanentemente?`)) {
+      try {
+        for (const orderId of selectedOrderIds) {
+          await api.deleteOrder(orderId);
+        }
+        setSelectedOrderIds([]);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting orders:', error);
+      }
+    }
+  };
+
+  const toggleOrderSelection = (orderId: number) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const toggleAllOrders = () => {
+    if (selectedOrderIds.length === filteredOrders.length) {
+      setSelectedOrderIds([]);
+    } else {
+      setSelectedOrderIds(filteredOrders.map(o => o.id));
+    }
+  };
+
   const resetProductForm = () => {
     setProductForm({ name: '', description: '', price: '', unit: 'kg', category_id: '', image_url: '', image_url_2: '', stock: '', min_order: '1' });
     setEditingProduct(null);
@@ -337,6 +369,33 @@ export const AdminPage: React.FC = () => {
 
   const resetUserForm = () => {
     setUserForm({ name: '', email: '', password: '', phone: '', address: '', city: '', purchase_volume: '' });
+    setEditingUser(null);
+  };
+
+  const openEditUser = (user: User) => {
+    setEditingUser(user);
+    setUserForm({
+      name: user.name || '',
+      email: user.email,
+      password: '',
+      phone: user.phone || '',
+      address: user.address || '',
+      city: user.city || '',
+      purchase_volume: user.purchase_volume || ''
+    });
+    setShowUserDialog(true);
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (confirm('¿Estás seguro de eliminar este cliente permanentemente?')) {
+      try {
+        await api.deleteUser(userId);
+        await loadData();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error al eliminar el cliente');
+      }
+    }
   };
 
   const resetPasswordForm = () => {
@@ -364,22 +423,32 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveUser = async () => {
     try {
-      await api.createUser({
-        email: userForm.email,
-        password: userForm.password,
-        name: userForm.name,
-        phone: userForm.phone,
-        address: userForm.address,
-        city: userForm.city,
-        purchase_volume: userForm.purchase_volume,
-        role: 'buyer'
-      });
+      if (editingUser) {
+        await api.updateUser(editingUser.id, {
+          name: userForm.name,
+          phone: userForm.phone,
+          address: userForm.address,
+          city: userForm.city,
+          purchase_volume: userForm.purchase_volume
+        });
+      } else {
+        await api.createUser({
+          email: userForm.email,
+          password: userForm.password,
+          name: userForm.name,
+          phone: userForm.phone,
+          address: userForm.address,
+          city: userForm.city,
+          purchase_volume: userForm.purchase_volume,
+          role: 'buyer'
+        });
+      }
       setShowUserDialog(false);
       resetUserForm();
       loadData();
     } catch (error) {
-      console.error('Error creating user:', error);
-      alert('Error al crear el cliente');
+      console.error('Error saving user:', error);
+      alert(editingUser ? 'Error al actualizar el cliente' : 'Error al crear el cliente');
     }
   };
 
@@ -544,9 +613,6 @@ export const AdminPage: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="categories" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
               <FolderOpen className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Categorias</span>
-            </TabsTrigger>
-            <TabsTrigger value="promotions" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
-              <Tag className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Promos</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xs sm:text-sm px-2 sm:px-4 py-2">
               <ShoppingBag className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Pedidos</span>
@@ -744,6 +810,15 @@ export const AdminPage: React.FC = () => {
                         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
                           <CardTitle>Pedidos ({orders.length})</CardTitle>
                           <div className="flex items-center gap-2 flex-wrap">
+                            {selectedOrderIds.length > 0 && (
+                              <Button 
+                                variant="destructive" 
+                                onClick={handleBulkDeleteOrders}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Eliminar ({selectedOrderIds.length})
+                              </Button>
+                            )}
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                               <Input
@@ -763,6 +838,14 @@ export const AdminPage: React.FC = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="border-b">
+                        <th className="p-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrderIds.length === filteredOrders.length && filteredOrders.length > 0}
+                            onChange={toggleAllOrders}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </th>
                         <th className="text-left p-3"># Pedido</th>
                         <th className="text-left p-3">Cliente</th>
                         <th className="text-left p-3">Fecha</th>
@@ -775,7 +858,15 @@ export const AdminPage: React.FC = () => {
                       {filteredOrders.map((order) => {
                         const status = statusConfig[order.status] || statusConfig['pending'];
                         return (
-                          <tr key={order.id} className="border-b hover:bg-gray-50">
+                          <tr key={order.id} className={`border-b hover:bg-gray-50 ${selectedOrderIds.includes(order.id) ? 'bg-blue-50' : ''}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedOrderIds.includes(order.id)}
+                                onChange={() => toggleOrderSelection(order.id)}
+                                className="w-4 h-4 cursor-pointer"
+                              />
+                            </td>
                             <td className="p-3 font-bold">#{order.id}</td>
                             <td className="p-3">
                               <p className="font-medium">{order.user_name}</p>
@@ -828,6 +919,7 @@ export const AdminPage: React.FC = () => {
                         <th className="text-left p-3">Ciudad</th>
                         <th className="text-left p-3">Direccion</th>
                         <th className="text-left p-3">Vol. Compra</th>
+                        <th className="text-center p-3">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -839,6 +931,16 @@ export const AdminPage: React.FC = () => {
                           <td className="p-3">{u.city || '-'}</td>
                           <td className="p-3">{u.address || '-'}</td>
                           <td className="p-3">{u.purchase_volume || '-'}</td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => openEditUser(u)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteUser(u.id)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1354,21 +1456,25 @@ export const AdminPage: React.FC = () => {
       <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nuevo Cliente</DialogTitle>
+            <DialogTitle>{editingUser ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Nombre *</label>
               <Input value={userForm.name} onChange={(e) => setUserForm({...userForm, name: e.target.value})} />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Email *</label>
-              <Input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Contraseña *</label>
-              <Input type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} />
-            </div>
+            {!editingUser && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <Input type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Contraseña *</label>
+                  <Input type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} />
+                </div>
+              </>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Teléfono</label>

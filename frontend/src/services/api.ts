@@ -282,6 +282,14 @@ export const api = {
     return response.json();
   },
 
+  async deleteUser(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true),
+    });
+    if (!response.ok) throw new Error('Error al eliminar usuario');
+  },
+
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     const response = await fetch(`${API_URL}/auth/change-password`, {
       method: 'PUT',
